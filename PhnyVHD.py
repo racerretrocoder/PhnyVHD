@@ -1,17 +1,23 @@
-import os, time, sys
+# PhnyVHD - By Phoenix
+# Runs on Windows 7 SP1 and up
+import os, time, sys, gzip
+# could use import zlib   compressed = zlib.compress(data, level=6)  # data must be bytes
+# could also use best lzma
 print("Note! This program requires administrative rights!")
-print("PhnyVHD - The ultimate Windows 7 Hard drive utility for\nfull disk raw backups")
+print("PhnyVHD - The Ultimate Hard Drive utility for full disk raw backups")
 try:
     import wmi
     import psutil
 except:
-    print("i couldnt find some imports, going to install for you")
+    print("I couldnt find some imports, I am going to install for you")
     os.system("pip install wmi")
     os.system("pip install psutil")
     time.sleep(10)
     print("wmi and psutil installed")
     import wmi, psutil
-print("Checking out local Physical Drives...")
+print("")
+print("Checking out Physical Drives...")
+print("")
 drives = [] # drives list of total sectors per disk
 drvpos = [] # for keeping order for drives[]
 c = wmi.WMI()
@@ -49,7 +55,7 @@ def main():
 |;;|_____________________|;;||  |___|  |__|__|__|__|___  | \_____/|___|__|___/
 |;;;;;;;;;;;;;;;;;;;;;;;;;;;||                     |_____| 
 |;;;;;;_______________ ;;;;;||
-|;;;;;|  ___          |;;;;;||
+|;;;;;|  ___          |;;;;;||  Version 1.02 - Hard Drive Tools
 |;;;;;| |;;;|         |;;;;;||
 |;;;;;| |;;;|         |;;;;;||
 |;;;;;| |;;;|         |;;;;;||
@@ -59,14 +65,14 @@ def main():
  ~~~~~^^^^^^^^^^^^^^^^^~~~~~~
                   """)
         time.sleep(1)
-        print("Phny VHD Version 1.0")
+        print("PhnyVHD Version 1.02")
         print("Phoenix - Backdoor Interactive (c) 2026")
-        print("DISCLAIMER: Any damage caused to data by mistake of input is\nNOT MY (or OUR) problems to fix. This software has been thorougly tested for bugs\nand errors. It is perfected to work without causing harm with correct inputs\n")
+        print("DISCLAIMER: Use this software at your own risk. Any damage caused to data by mistake of input is\nNOT MY (or OUR) responsibility.\n")
         print("\nWhat would you like to do?\n0 --> Convert a physical drive to a .PVHD\n1 --> Flash a .PVHD to a physical drive\n")
         mode = int(input("\n> "))
         diskid = str(input("Enter a physicaldrive number\n> "))
         if mode == 0:
-            print("Save mode selected!")    
+            print("Preparing drives - Please wait!") # read    
             os.system("cls")
             # note of funny variable, aeaeae is the filename
             aeaeae = str(input("Enter a filename without a path for the .PVHD\n\nWARNING: To prevent an infinite loop (where PVHD reads a PVHD its writing to)\nMake sure you save the PVHD on a different volume than the one you are\ngoing to convert. A USB Drive or portable secondary harddrive\n\n> "))
@@ -78,13 +84,13 @@ def main():
                 directory = directory + "\\"
             read_sector(r"\\.\physicaldrive"+diskid, diskid, aeaeae, directory)
         if mode == 1:
-            print("Write mode selected!")    
+            print("Preparing Drives - Please wait!")  # write  
             os.system("cls")
             aeaeae = str(input("Enter the full path with filename to the .PVHD file that will be written to a physical drive\n\nWARNING: Make sure you have the PVHD\non a different volume than the one you are going to flash! (common sense xd)\n\n> "))
             directory = "ae" # lol
             read_sector(r"\\.\physicaldrive"+diskid, diskid, aeaeae, directory)
     else:
-        print("Hello linux user! I am sorry to say, but PVHD is not compatible on linux yet\nIt might be soon! So please stay tuned and keep in touch...\nIt is compatible on Windows 7 and up")
+        print("Hello linux user! I am sorry to say, but PVHD is not compatible on linux yet\nIt might be soon! So please stay tuned and keep in touch...\nIt is compatible with Windows 7 and up. Python 3.8.8")
 
 def read_sector(disk, diskid, filename, directory, sector_no=0):
     diskid = int(diskid)
@@ -100,6 +106,7 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
 
     drivesize = len(drives) - 1 # include the zero
     #print(drivesize)
+    # Note this code aint used
     diskindexsectors = diskid
     if drivesize != 0:
         # looks like theres more than one hdd
@@ -138,9 +145,9 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
 
             # stuff about metadata 2.0
             # it must not exceed or come short of exactly 550 bytes. so "filler" must be added to meet the intentions
-            print("Create PVHD Metadata for: ",filename)
+            print("Creating PVHD Metadata for: ",filename)
             name = str(input("Enter a name for the PVHD (Max 25 chars)\n> "))
-            desc = str(input("Enter a description for the PVHD (Max 460 chars)\nTip: use '~n' for a new line!> "))
+            desc = str(input("Enter a description for the PVHD (Max 460 chars)> "))
             desc = desc.replace("~n","\n") # make the tip true ae
             if len(name) > 25:
                 print("That name is longer than 25 chars! Please shorten it")
@@ -160,7 +167,36 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
                 desc = desc + " " # add filler
             print("done appending desc")
             print(len(desc))# ||END|| 7 byte end header
-        pvhdmode = "R" # todo: add compression, and maybe encryption, R Stands for RAW btw
+        while True:
+                #   New modes!
+                #   R RAW
+                #   C Compressed
+                #   E Encrypted
+            print("Which mode should the PVHD operate in?")
+            print("R - RAW, save the drives contents directly")
+            print("C - Compressed, (de)Compresses a large heap of sectors. Creates individual compressed files in a seperate folder")
+            print("E - Encryption (and compression) WIP This option is broken")
+            print("Press Enter to autoselect the RAW formate")
+            pvhdmode = input("> ")
+            if pvhdmode == "":
+                pvhdmode = "R"
+            pvhdmode = pvhdmode.upper()
+            if pvhdmode == "r" or pvhdmode == "c" or pvhdmode == "R" or pvhdmode == "C":
+                # valid
+                break
+            print("Invalid entry!")
+
+        # Compression stuff
+        # statisically speaking, for 512bps, a scale of 10,000 produces every 211 files for 1GB | Windows reports 5,000kb
+        #```````````````````````````````````a scale of 100,000 produces every 22 files for 1GB but overshoots and goes to 1.04, Windows repots 50,000
+        # 10,000 has its downside, a large file count, but accurate enough and can only overshoot by 5,000KB
+        if len(str(bytesper)) > 3:
+            compbytes = bytesper * 10000  # if 4096, 0.4096gb
+        else:
+            compbytes = bytesper * 10000 # if 512,  0.5120gb
+        # NOTE: If you change these values, please be sure to change the values for the addedsector variable! (use control-f, youll find it)
+        # NOTE: There are 2 instances of this variable, one here, and one all the way at the bottom for mode 1 (writing)
+        # NOTE:                
 
         # total physicaldrive sectors will be in PVHD metadata for future referernce
         # This number will be limited to 15 bytes (so 15 digits). It will be parsed by string and the filler will be 0's
@@ -182,7 +218,7 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
                 break 
         # now for used sectors
         pvhdusedsectors = request / bytesper # take used size bytes and divide it by bytes per sector to get sector count
-        pvhdusedsectors = int(pvhdusedsectors) # trunk it
+        pvhdusedsectors = int(pvhdusedsectors) # trunk it / intify it
         pvhdusedsectors = str(pvhdusedsectors) # re-re-stringify it
         while True:
             if len(pvhdusedsectors) != 15:
@@ -234,6 +270,7 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
                     desc = desc.replace("-","") # Defiller
                     desc = desc.replace("   ","") # Defiller
                     pvhdsize = pvhdtotalsectors * bytesper
+                    pvhdused = pvhdusedsectors * bytesper
                     pvhdsizegb = pvhdsize / 1000000000
                     print("Information about ",filename)
                     print("Name:",name)
@@ -268,12 +305,19 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
         print("Warning! All data on PhysicalDrive",diskid," will be erased to flash the PVHD file!")
     ae2 = input("\nPress any key to start!!")
     read = None
+    #
+    # Reading and Writing
+    #
     if mode == 0: # Read mode (Create PVHD)
         with open(disk, 'rb') as hdd: # init the hard disk
             # move the heads to the start
             hdd.seek(0)
             if not os.path.exists(directory):
                 os.makedirs(directory)
+            if pvhdmode == "C": # Compression!
+                if not os.path.exists(directory+filename+"compressed"):
+                    os.makedirs(directory+filename+"compressed")
+                    
             with open(directory+filename, 'wb') as pvhd:
                 # clear the file and add in metadata!
                 pvhd.write(metabytes) # Writeout the metadata
@@ -281,48 +325,128 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
                 print("Reading the drive and writing to the PVHD file\nDo not close this window or unplug any drives\n")
                 percentage = 0
                 percentold = -1
+                compresscounter = 0 # Start at file number 0
                 while True:
                     try:
-                        sector = hdd.read(bytesper) # get the sector xd
-                        if not sector:
-                            print("Reached end of disk!")
-                            ae = input("Press any key to exit!")
-                            pvhd.close()
-                            hdd.close()
-                            break
-                        #print("Start of sector!")
-                        #print(sector)
-                        #print("End of sector!")
-                        pvhd.write(sector)
-                        #print("Successfully read and written sector ",sectorcounter," to PVHD")
-                        # increment them stats!
-                        sectorcounter = sectorcounter + 1
-                        totalbyteswtn = sectorcounter * bytesper
-                        # now percentage calc!
-                        if request != 0:
-                            # we writing to certain point in file
-
-                            percentage = totalbyteswtn / request
-                            percentage = percentage * 100
-                            percentage = int(percentage) # change to int
-                            perstring = str(percentage)
-                            if percentold != percentage:
-                                os.system("cls")
-                                print("Reading the drive and writing to the PVHD file\nDo not close this window or unplug any drives\n")
-                                print("Progress: ",percentage,"% Complete") # ehh print it out why not
-                                percentold = percentage
-                        # debug
-                        #print("Total bytes written: ",totalbyteswtn)
-                        # now we check if we have passed the requested limit of bytes to write
-                        if request != 0:
-                            if request + bytesper < totalbyteswtn: # add just one extra sector to write
-                                print("-------------------- Finished! -------------------- \nThe PVHD has been successfully written to ",directory+filename,"\n")
+                        if pvhdmode == "R":
+                            # Raw disk
+                            sector = hdd.read(bytesper) # get the sector xd
+                            if not sector:
+                                print("Reached end of HDD disk!")
+                                ae = input("Press any key to continue")
                                 pvhd.close()
-                                ae = input("Press any key to exit the utility")
+                                hdd.close()
                                 break
-                        # move to the next sector
-                        #hdd.seek(bytesper,1)
-                        # repeat!
+                            pvhd.write(sector)
+                            sectorcounter = sectorcounter + 1
+                            totalbyteswtn = sectorcounter * bytesper
+                            # now percentage calc!
+                            # Request: If request is given (Dynamic PVHD)
+                            if request != 0:
+                                percentage = totalbyteswtn / request
+                                percentage = percentage * 100
+                                percentage = int(percentage) # change to int
+                                perstring = str(percentage)
+                                if percentold != percentage:
+                                    os.system("cls")
+                                    print("Reading the drive and writing to the PVHD file\nDo not close this window or unplug any drives\n")
+                                    print("Progress: ",percentage,"% Complete") # ehh print it out why not
+                                    percentold = percentage
+                            if request != 0:
+                                if request + bytesper < totalbyteswtn: # add just one extra sector to write
+                                    print("-------------------- Finished! -------------------- \nThe PVHD has been successfully written to ",directory+filename,"\n")
+                                    pvhd.close()
+                                    ae = input("Press any key to exit the utility")
+                                    break
+
+                            if request == 0:
+                                percentage = sectorcounter / totalsectors
+                                percentage = percentage * 100
+                                percentage = int(percentage) # change to int
+                                perstring = str(percentage)
+                                if percentold != percentage:
+                                    os.system("cls")
+                                    print("Reading the entire drive and writing to the PVHD file\nDo not close this window or unplug any drives\n")
+                                    print("Progress: ",percentage,"% Complete") # ehh print it out why not
+                                    percentold = percentage
+                            if request == 0:
+                                if sectorcounter == totalsectors or sectorcounter > totalsectors: # write data to the last sector and dont go over
+                                    print("-------------------- Finished! -------------------- \nThe PVHD has been successfully written to ",directory+filename,"\n")
+                                    pvhd.close()
+                                    ae = input("Press any key to exit the utility")
+                                    break
+                        if pvhdmode == "C":
+                            # Compression
+                            # Variable is compbytes
+                            sectorheap = hdd.read(compbytes)
+                            if not sectorheap:
+                                if compresscounter == 0:
+                                    print("ERROR! The drive appears to be to small to compress")
+                                print("Reached end of the drive!")
+                                ae = input("Press any key to exit!")
+                                pvhd.close()
+                                hdd.close()
+                                break
+                            print("Compressing sectorheap #",str(compresscounter))
+
+                            sectorheap = gzip.compress(sectorheap)
+                            thestring = directory+filename+"compressed"+"\\compressedsectors"+str(compresscounter)+".bin"
+                            
+                            # write and compress
+                            
+                            with open(thestring, 'wb') as compressedbinary:
+                                print("Writing out compressed data")
+                                compressedbinary.write(sectorheap) # create a compressed file
+                                compressedbinary.close() # close it
+                                print("Completed compression of sectorheap #",str(compresscounter))
+                                 
+                            compresscounter = compresscounter + 1 # increment the file number
+                            if len(str(bytesper)) > 3:
+                                addedsector = 10000  # if 4096, 0.4096gb per file
+                            else:
+                                addedsector = 10000 # if 512,  0.5120gb per file (uncompressed)
+                            # NOTE: if you change these values, please change the values for the variable compbytes aswell
+                            # NOTE: There is a second instance of this variable over in mode 1 (the HDD writing section towards the bottom)
+                            # (use control-f and search for "bytesper *")
+                            # increase counter
+                            sectorcounter = sectorcounter + addedsector
+                            totalbyteswtn = sectorcounter * bytesper    # note: this is the total ammount of UNCOMPRESSED bytes written
+                            print(totalbyteswtn)
+                            # Percentage calc for compression progress
+                            if request != 0:
+                                percentage = totalbyteswtn / request
+                                percentage = percentage * 100
+                                percentage = int(percentage) # change to int
+                                perstring = str(percentage)
+                                if percentold != percentage:
+                                    os.system("cls")
+                                    print("Reading the drive, compressing and writing to the PVHD file\nDo not close this window or unplug any drives\n")
+                                    print("Progress: ",percentage,"% Complete") # ehh print it out why not
+                                    percentold = percentage
+                            if request != 0:
+                                if request + compbytes <= totalbyteswtn: # add just one extra sector to write
+                                    print("-------------------- Finished! -------------------- \nThe PVHD has been successfully written to ",directory+filename,"\n")
+                                    pvhd.close()
+                                    ae = input("Press any key to exit the utility")
+                                    break
+                            if request == 0:
+                                percentage = sectorcounter / totalsectors
+                                percentage = percentage * 100
+                                percentage = int(percentage) # change to int
+                                perstring = str(percentage)
+                                if percentold != percentage:
+                                    os.system("cls")
+                                    print("Reading the drive, compressing and writing to the PVHD file\nDo not close this window or unplug any drives\n")
+                                    print("Progress: ",percentage,"% Complete") # ehh print it out why not
+                                    percentold = percentage
+                            if request == 0:
+                                if sectorcounter == totalsectors or sectorcounter > totalsectors: # write data to the last sector and dont go over
+                                    print("-------------------- Finished! -------------------- \nThe PVHD has been successfully written to ",directory+filename,"\n")
+                                    pvhd.close()
+                                    ae = input("Press any key to exit the utility")
+                                    break
+                        
+                            
                     except Exception as e:
                         print("We've hit an error, most likely reached the end of the hard disk!")
                         print("At sector: ",sectorcounter)
@@ -338,18 +462,18 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
         #try:
         print("Attempting to open PhysicalDrive",diskid," for excluseive write access")
         hdd = open(disk, 'rb+')# as hdd: # init hard disk
-        hdd.seek(0) # move the heads to the start
-        print(filename)
-        pvhd = open(filename, 'rb')
-        print("PVHD opened")
-        pvhd.seek(550)
-        print("Reading PVHD...")
-        # Todo! Make a file header for a .PVHD fileand include nice metadata
-        pvhdsize = os.path.getsize(filename)
-        print("PVHD Size (in bytes):  ",pvhdsize)
-        print("Writing to the disk. Please wait")
-        percentold = -1
-        while True:
+        hdd.seek(0)# move the heads to the start
+        if pvhdmode == "R": # RAW Write
+            print(filename)
+            pvhd = open(filename, 'rb')
+            print("PVHD opened")
+            pvhd.seek(550) # Skip the header
+            print("Reading PVHD...") # 
+            pvhdsize = os.path.getsize(filename) - 550 # IMPORTANT: Skip the header!
+            print("PVHD Size (in bytes):  ",pvhdsize)
+            print("Writing to the disk. Please wait")
+            percentold = -1
+            while True:
                     # break check
                     percentage = totalbyteswtn / pvhdsize
                     percentage = percentage * 100
@@ -377,12 +501,60 @@ def read_sector(disk, diskid, filename, directory, sector_no=0):
                         print("Flashing the PVHD to the Physical Drive\nDo not close this window or unplug any drives\n")
                         print("Progress: ",percentage,"% Complete") # ehh print it out why not
                         percentold = percentage
-                        
-        #except Exception as e:
-        # No errors anymore! so can comment out
-        #    print("We've reached an error... great.\nError: ",e)
-        #    dummyvar = input("\n")
+    if pvhdmode == "C":
+        # Its a compressed PVHD
+        # read the compressed file
+        # decompress it
+        # write it out
+        # repeat
+        compresscounter = 0
+        thestring = filename+"compressed\\compressedsectors"+str(compresscounter)+".bin"
+        percentold = -1
+        if len(str(bytesper)) > 3:
+            compbytes = bytesper * 10000  # if 4096, 0.4096gb
+        else:
+            compbytes = bytesper * 10000 # if 512,  0.5120gb
+        if len(str(bytesper)) > 3:
+            addedsector = 10000  # if 4096, 0.4096gb per file
+        else:
+            addedsector = 10000  # if 512,  0.5120gb per file (uncompressed)
+        sectorcounter = 0
+        while True:
+            # read it, decomp, write it out, repeat till end of compfile list
+            thestring = filename+"compressed\\compressedsectors"+str(compresscounter)+".bin"
+            try:
+                with open(thestring, "rb") as compsectors: # open a compression heap
+                    compressed = compsectors.read()
+                    if compressed != b"":
+                        print("Decompressing sectorheap #",compresscounter)
+                        sectorheap = gzip.decompress(compressed)
+                        hdd.write(sectorheap) # write out the data
 
-
+                    totalbyteswtn = sectorcounter * bytesper    # note: this is the total ammount of UNCOMPRESSED bytes written
+                    percentage = totalbyteswtn / pvhdused
+                    percentage = percentage * 100
+                    percentage = int(percentage)
+                    if totalbyteswtn >= pvhdsize:
+                        print("Drive writing done!")
+                        print("",percentage,"% Complete. Disk write finished successfully!!")
+                        time.sleep(1)
+                        dummyvar = input("Do a Disk Rescan in Disk Management\nPress any key to exit")
+                        break
+                    sectorcounter = sectorcounter + addedsector 
+                    perstring = str(percentage)
+                    if percentold != percentage:
+                        os.system("cls")
+                        print("Flashing the PVHD to the Physical Drive\nDo not close this window or unplug any drives\n")
+                        print("Progress: ",percentage,"% Complete") # ehh print it out why not
+                        percentold = percentage
+                    compsectors.close()
+            except:
+                print("Physical write completed successfully!\nDo a disk rescan in diskmanagement to see the results!")
+                ae = input("Press any key to exit")
+                break
+                exit()
+            # End of loop xd
+            compresscounter = compresscounter + 1 # visit the next compressed file
+            thestring = filename+"compressed\\compressedsectors"+str(compresscounter)+".bin"
 if __name__ == "__main__":
     main()
